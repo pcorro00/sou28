@@ -44,4 +44,9 @@ public class EnemyData : ScriptableObject
     [Header("설명")]
     [TextArea(2, 3)]
     public string description;
+
+    [Header("특수 스탯")]
+    public float criticalChance = 0f;
+    public float criticalDamage = 1.2f;  // 새로 추가
+    public float evasionChance = 0f;
 }

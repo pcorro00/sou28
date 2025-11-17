@@ -74,6 +74,7 @@ public class UnitData : ScriptableObject
     [Header("특수 스탯")]
     [Range(0f, 100f)]
     public float baseCriticalChance = 0f;       // 치명타 확률 (%)
+    public float baseCriticalDamage = 1.2f;     // 치명타데미지배수
     [Range(0f, 100f)]
     public float baseEvasionChance = 0f;        // 회피 확률 (%)
     [Range(0f, 100f)]

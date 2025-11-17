@@ -25,8 +25,9 @@ public class TraitPanelUI : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private int maxVisibleSlots = 8;
 
-    private List<TraitSlotUI> allSlots = new List<TraitSlotUI>();
+    private List<TraitSlotUI> slotPool = new List<TraitSlotUI>();
     private bool isExpanded = false;
+    private bool initialized = false;
 
     public static TraitPanelUI Instance { get; private set; }
 
@@ -52,10 +53,9 @@ public class TraitPanelUI : MonoBehaviour
         if (expandButton != null)
         {
             expandButton.onClick.AddListener(ToggleExpand);
-            expandButton.gameObject.SetActive(false);
         }
 
-        CreateInitialSlots();
+        InitializeSlotPool();
         RefreshUI();
 
         Debug.Log("Trait Panel UI initialized");
@@ -69,116 +69,125 @@ public class TraitPanelUI : MonoBehaviour
         }
     }
 
-    private void CreateInitialSlots()
+    private void InitializeSlotPool()
     {
-        // 모든 시너지 슬롯 생성 (숨김 상태)
-        CreateSlot("Warrior", warriorIcon);
-        CreateSlot("Mage", mageIcon);
-        CreateSlot("Archer", archerIcon);
-        CreateSlot("Human", humanIcon);
-        CreateSlot("Elf", elfIcon);
-        CreateSlot("Dwarf", dwarfIcon);
+        Debug.Log($"InitializeSlotPool 호출! initialized={initialized}, slotPool.Count={slotPool.Count}");
+
+        if (initialized)
+        {
+            Debug.Log("이미 초기화됨, 리턴");
+            return;
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            CreateSlot();
+        }
+
+        initialized = true;
+        Debug.Log($"슬롯풀 생성 완료: {slotPool.Count}개");
     }
 
-    private void CreateSlot(string traitName, Sprite icon)
+    private void CreateSlot()
     {
-        if (traitSlotPrefab == null || traitsContainer == null) return;
+        if (traitSlotPrefab == null || traitsContainer == null)
+        {
+            Debug.LogError("Prefab or Container is null!");
+            return;
+        }
 
         GameObject slotObj = Instantiate(traitSlotPrefab, traitsContainer);
         TraitSlotUI slot = slotObj.GetComponent<TraitSlotUI>();
 
         if (slot != null)
         {
-            allSlots.Add(slot);
+            slotPool.Add(slot);
             slotObj.SetActive(false);
         }
     }
 
     private void RefreshUI()
     {
-        if (TraitManager.Instance == null) return;
+        Debug.Log("=== RefreshUI 호출 ===");
 
-        // 데이터 수집
-        List<TraitData> traits = new List<TraitData>();
-
-        // 직업 시너지
-        AddTraitData(traits, "Warrior", UnitClass.Warrior, warriorIcon);
-        AddTraitData(traits, "Mage", UnitClass.Mage, mageIcon);
-        AddTraitData(traits, "Archer", UnitClass.Archer, archerIcon);
-
-        // 종족 시너지
-        AddTraitData(traits, "Human", UnitRace.Human, humanIcon);
-        AddTraitData(traits, "Elf", UnitRace.Elf, elfIcon);
-        AddTraitData(traits, "Dwarf", UnitRace.Dwarf, dwarfIcon);
-
-        // 카운트가 0인 것 제거
-        traits = traits.Where(t => t.info.currentCount > 0).ToList();
-
-        // 정렬: currentCount 내림차순
-        traits = traits.OrderByDescending(t => t.info.currentCount).ToList();
-
-        // 슬롯 업데이트
-        UpdateSlots(traits);
-
-        // 확장 버튼 표시 여부
-        UpdateExpandButton(traits.Count);
-    }
-
-    private void AddTraitData(List<TraitData> list, string name, UnitClass unitClass, Sprite icon)
-    {
-        TraitInfo info = TraitManager.Instance.GetClassTrait(unitClass);
-        if (info != null)
+        if (TraitManager.Instance == null)
         {
-            list.Add(new TraitData { name = name, info = info, icon = icon });
+            Debug.LogError("TraitManager.Instance is NULL!");
+            return;
         }
-    }
 
-    private void AddTraitData(List<TraitData> list, string name, UnitRace unitRace, Sprite icon)
-    {
-        TraitInfo info = TraitManager.Instance.GetRaceTrait(unitRace);
-        if (info != null)
-        {
-            list.Add(new TraitData { name = name, info = info, icon = icon });
-        }
-    }
-
-    private void UpdateSlots(List<TraitData> traits)
-    {
         // 모든 슬롯 숨김
-        foreach (var slot in allSlots)
+        foreach (var slot in slotPool)
         {
             slot.gameObject.SetActive(false);
         }
 
-        // 필요한 만큼만 표시
-        int visibleCount = isExpanded ? traits.Count : Mathf.Min(traits.Count, maxVisibleSlots);
+        // 시너지 데이터 수집
+        List<TraitDisplayData> traits = CollectTraitData();
+        Debug.Log($"수집된 시너지 개수: {traits.Count}");
 
-        for (int i = 0; i < visibleCount && i < allSlots.Count; i++)
+        // 각 시너지 출력
+        foreach (var t in traits)
+        {
+            Debug.Log($"시너지: {t.name}, 카운트: {t.count}, 아이콘: {(t.icon != null ? "있음" : "없음")}");
+        }
+
+        // 카운트 0인 것 제거
+        traits = traits.Where(t => t.count > 0).ToList();
+        Debug.Log($"카운트 > 0인 시너지: {traits.Count}개");
+
+        // 정렬
+        traits = traits.OrderByDescending(t => t.count).ToList();
+
+        // 슬롯 업데이트
+        int visibleCount = isExpanded ? traits.Count : Mathf.Min(traits.Count, maxVisibleSlots);
+        Debug.Log($"표시할 슬롯 개수: {visibleCount}, 슬롯풀 크기: {slotPool.Count}");
+
+        for (int i = 0; i < visibleCount && i < slotPool.Count; i++)
         {
             if (i < traits.Count)
             {
-                allSlots[i].Setup(traits[i].name, traits[i].info, traits[i].icon);
-                allSlots[i].gameObject.SetActive(true);
+                Debug.Log($"슬롯 {i} 설정: {traits[i].name}");
+                slotPool[i].Setup(traits[i].name, traits[i].info, traits[i].icon);
+                slotPool[i].gameObject.SetActive(true);
             }
+        }
+
+        // 확장 버튼
+        if (expandButton != null)
+        {
+            expandButton.gameObject.SetActive(traits.Count > maxVisibleSlots);
         }
     }
 
-    private void UpdateExpandButton(int totalCount)
+    private List<TraitDisplayData> CollectTraitData()
     {
-        if (expandButton == null) return;
+        List<TraitDisplayData> traits = new List<TraitDisplayData>();
 
-        if (totalCount > maxVisibleSlots)
+        // 직업 시너지
+        AddIfExists(traits, "전사", TraitManager.Instance.GetClassTrait(UnitClass.Warrior), warriorIcon);
+        AddIfExists(traits, "마법사", TraitManager.Instance.GetClassTrait(UnitClass.Mage), mageIcon);
+        AddIfExists(traits, "궁수", TraitManager.Instance.GetClassTrait(UnitClass.Archer), archerIcon);
+
+        // 종족 시너지
+        AddIfExists(traits, "인간", TraitManager.Instance.GetRaceTrait(UnitRace.Human), humanIcon);
+        AddIfExists(traits, "엘프", TraitManager.Instance.GetRaceTrait(UnitRace.Elf), elfIcon);
+        AddIfExists(traits, "드워프", TraitManager.Instance.GetRaceTrait(UnitRace.Dwarf), dwarfIcon);
+
+        return traits;
+    }
+
+    private void AddIfExists(List<TraitDisplayData> list, string name, TraitInfo info, Sprite icon)
+    {
+        if (info != null)
         {
-            expandButton.gameObject.SetActive(true);
-
-            if (expandButtonText != null)
+            list.Add(new TraitDisplayData
             {
-                expandButtonText.text = isExpanded ? "-" : "+";
-            }
-        }
-        else
-        {
-            expandButton.gameObject.SetActive(false);
+                name = name,
+                info = info,
+                icon = icon,
+                count = info.currentCount
+            });
         }
     }
 
@@ -188,10 +197,11 @@ public class TraitPanelUI : MonoBehaviour
         RefreshUI();
     }
 
-    private class TraitData
+    private class TraitDisplayData
     {
         public string name;
         public TraitInfo info;
         public Sprite icon;
+        public int count;
     }
 }

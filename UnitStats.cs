@@ -5,7 +5,7 @@ using System.Collections.Generic;
 /// 유닛 스탯 시스템 (마나 기반 전투)
 /// </summary>
 public class UnitStats : MonoBehaviour
-{   
+{
     [Header("캐릭터 정보")]
     [SerializeField] private UnitType unitType;
     [SerializeField] private string characterName;
@@ -15,17 +15,18 @@ public class UnitStats : MonoBehaviour
     [SerializeField] private float attackDamage = 10f;
     [SerializeField] private float attackRange = 3f;
     [SerializeField] private float defense = 0f;
-    
+
     [Header("마나 시스템")]
     [SerializeField] private float maxMana = 100f;
     [SerializeField] private float manaRegen = 20f;     // 초당 마나 회복
-    
+
     [Header("특수 스탯")]
     [SerializeField] private float criticalChance = 0f;
+    [SerializeField] private float criticalDamage = 1.2f;
     [SerializeField] private float evasionChance = 0f;
     [SerializeField] private float lifeSteal = 0f;
     [SerializeField] private float healthRegen = 0f;
-    
+
     [Header("시너지 (Traits)")]
     [SerializeField] private UnitClass unitClass;
     [SerializeField] private UnitRace unitRace;
@@ -40,7 +41,7 @@ public class UnitStats : MonoBehaviour
     private Vector2Int gridPosition;
     private EnemyController currentTarget;
     private List<EnemyController> enemiesInRange = new List<EnemyController>();
-    
+
     // 시너지 버프 (TraitManager가 설정)
     [HideInInspector] public float traitHealthMultiplier = 1f;
     [HideInInspector] public float traitAttackMultiplier = 1f;
@@ -59,7 +60,7 @@ public class UnitStats : MonoBehaviour
     public UnitClass UnitClass => unitClass;
     public UnitRace UnitRace => unitRace;
     public bool IsDead => currentHealth <= 0;
-
+    public float CriticalDamage => criticalDamage;
     private void Awake()
     {
         currentHealth = MaxHealth;
@@ -80,13 +81,13 @@ public class UnitStats : MonoBehaviour
 
         // 마나 재생
         RegenerateMana();
-        
+
         // 체력 재생
         RegenerateHealth();
 
         // 적 탐지
         DetectEnemies();
-        
+
         // 공격 (마나가 가득 차면)
         AttackTarget();
     }
@@ -103,32 +104,33 @@ public class UnitStats : MonoBehaviour
 
         unitType = unitData.unitType;
         characterName = unitData.unitName;
-        
+
         // 기본 스탯
         maxHealth = unitData.baseHealth;
         currentHealth = MaxHealth;
         attackDamage = unitData.baseAttackDamage;
         attackRange = unitData.baseAttackRange;
         defense = unitData.baseDefense;
-        
+
         // 마나
         maxMana = unitData.baseMaxMana;
         manaRegen = unitData.baseManaRegen;
         currentMana = 0f;
-        
+
         // 특수 스탯
         criticalChance = unitData.baseCriticalChance;
+        criticalDamage = unitData.baseCriticalDamage;
         evasionChance = unitData.baseEvasionChance;
         lifeSteal = unitData.baseLifeSteal;
         healthRegen = unitData.baseHealthRegen;
-        
+
         // 시너지
         unitClass = unitData.unitClass;
         unitRace = unitData.unitRace;
 
         Debug.Log($"Unit initialized: {unitData.unitName} ({unitData.unitClass}/{unitData.unitRace})");
     }
-    
+
     /// <summary>
     /// 마나 재생
     /// </summary>
@@ -140,7 +142,7 @@ public class UnitStats : MonoBehaviour
             currentMana = Mathf.Min(currentMana + regenAmount, maxMana);
         }
     }
-    
+
     /// <summary>
     /// 체력 재생
     /// </summary>
@@ -202,7 +204,7 @@ public class UnitStats : MonoBehaviour
     private void AttackTarget()
     {
         if (currentTarget == null) return;
-        
+
         // 마나가 가득 찼는지 확인
         if (currentMana < maxMana)
         {
@@ -218,46 +220,46 @@ public class UnitStats : MonoBehaviour
 
         // 공격!
         PerformAttack(currentTarget);
-        
+
         // 마나 소모
         currentMana = 0f;
     }
-    
+
     /// <summary>
     /// 실제 공격 실행
     /// </summary>
     private void PerformAttack(EnemyController target)
     {
         if (target == null) return;
-        
+
         // 최종 공격력 (시너지 버프 적용)
         float finalDamage = attackDamage * traitAttackMultiplier;
-        
+
         // 치명타 체크
         bool isCritical = false;
         float totalCritChance = criticalChance + traitCritChanceBonus;
         if (Random.Range(0f, 100f) < totalCritChance)
         {
             isCritical = true;
-            finalDamage *= 2f; // 치명타 2배 데미지
+            finalDamage *= criticalDamage; // 치명타 배수 데미지
         }
-        
+
         // 공격
         target.TakeDamage(finalDamage);
-        
+
         // 흡혈
         if (lifeSteal > 0)
         {
             float healAmount = finalDamage * (lifeSteal / 100f);
             Heal(healAmount);
         }
-        
+
         if (showDebugLogs || isCritical)
         {
             string critText = isCritical ? " CRITICAL!" : "";
             Debug.Log($"<color=red>[ATTACK] {characterName} attacked {target.EnemyData.enemyName} for {finalDamage:F1} damage!{critText}</color>");
         }
-        
+
         StartCoroutine(AttackPunchEffect());
     }
 
@@ -277,14 +279,14 @@ public class UnitStats : MonoBehaviour
             Debug.Log($"{characterName} evaded attack!");
             return;
         }
-        
+
         // 방어력 적용
         float totalDefense = defense + traitDefenseBonus;
         float damageReduction = totalDefense / (totalDefense + 100f);
         float finalDamage = damage * (1f - damageReduction);
-        
+
         currentHealth -= finalDamage;
-        
+
         if (showDebugLogs)
         {
             Debug.Log($"{characterName} took {finalDamage:F1} damage (Defense: {totalDefense}). HP: {currentHealth:F1}/{MaxHealth:F1}");
@@ -323,6 +325,13 @@ public class UnitStats : MonoBehaviour
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawLine(transform.position, currentTarget.transform.position);
+        }
+    }
+    private void OnMouseDown()
+    {
+        if (UnitInfoUI.Instance != null)
+        {
+            UnitInfoUI.Instance.ShowUnitInfo(this);
         }
     }
 }

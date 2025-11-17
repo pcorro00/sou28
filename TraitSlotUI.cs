@@ -22,19 +22,44 @@ public class TraitSlotUI : MonoBehaviour
 
     public void Setup(string name, TraitInfo info, Sprite icon)
     {
+        Debug.Log($"[Setup 호출] name={name}, info={(info != null ? "있음" : "없음")}, icon={(icon != null ? "있음" : "없음")}");
+
         traitName = name;
         traitInfo = info;
+
+        if (traitInfo != null)
+        {
+            Debug.Log($"[Setup] {name} - currentCount={traitInfo.currentCount}");
+        }
+
         UpdateUI(icon);
     }
 
     private void UpdateUI(Sprite icon)
     {
-        if (traitInfo == null) return;
+        Debug.Log($"[UpdateUI 시작] traitName={traitName}, traitInfo={(traitInfo != null ? "있음" : "없음")}");
+        if (traitInfo == null)
+        {
+            Debug.LogError($"[UpdateUI] {traitName}의 traitInfo가 NULL!");
+            return;
+        }
+
+        Debug.Log($"[UpdateUI] {traitName} - currentCount={traitInfo.currentCount}");
 
         // 아이콘
-        if (iconImage != null && icon != null)
+        if (iconImage != null)
         {
-            iconImage.sprite = icon;
+            if (icon != null)
+            {
+                iconImage.sprite = icon;
+                iconImage.enabled = true;
+                Debug.Log($"Icon set: {traitName}");
+            }
+            else
+            {
+                iconImage.enabled = false;
+                Debug.LogWarning($"Icon is null for {traitName}");
+            }
         }
 
         // 이름
@@ -50,17 +75,18 @@ public class TraitSlotUI : MonoBehaviour
             if (nextThreshold > 0)
             {
                 countText.text = $"{traitInfo.currentCount}/{nextThreshold}";
+                Debug.Log($"[{traitName}] CountText 설정: {traitInfo.currentCount}/{nextThreshold}");
             }
             else
             {
                 countText.text = $"{traitInfo.currentCount}";
             }
-        }
 
-        // 배경 색상
-        if (backgroundImage != null)
-        {
-            backgroundImage.color = GetColorByLevel();
+            // 배경 색상
+            if (backgroundImage != null)
+            {
+                backgroundImage.color = GetColorByLevel();
+            }
         }
     }
 

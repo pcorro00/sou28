@@ -18,6 +18,11 @@ public class EnemyController : MonoBehaviour
     private Vector3 targetPosition;     // 목표 지점 (기지)
     private bool isDead = false;
 
+    [Header("특수 스탯")]
+    [SerializeField] private float criticalChance = 0f;
+    [SerializeField] private float criticalDamage = 1.2f;  
+    [SerializeField] private float evasionChance = 0f;
+
     // 전투 관련
     private UnitStats currentTarget;                        // 현재 공격 대상
     private float lastAttackTime;                           // 마지막 공격 시간
@@ -27,6 +32,10 @@ public class EnemyController : MonoBehaviour
     public float CurrentHealth => currentHealth;
     public float MaxHealth => enemyData != null ? enemyData.maxHealth : 100f;
     public bool IsDead => isDead;
+
+    public float CriticalChance => criticalChance;
+    public float CriticalDamage => criticalDamage;
+    public float EvasionChance => evasionChance;
 
     private void Awake()
     {
@@ -78,6 +87,9 @@ public class EnemyController : MonoBehaviour
         // 전투 스탯 설정 (EnemyData에서)
         attackRange = data.attackRange;
         attackCooldown = data.attackCooldown;
+        criticalChance = data.criticalChance;
+        criticalDamage = data.criticalDamage;  // 추가
+        evasionChance = data.evasionChance;
 
         // 비주얼 설정
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
@@ -364,6 +376,13 @@ public class EnemyController : MonoBehaviour
                 Gizmos.color = Color.magenta;
                 Gizmos.DrawLine(transform.position, currentTarget.transform.position);
             }
+        }
+    }
+    private void OnMouseDown()
+    {
+        if (UnitInfoUI.Instance != null)
+        {
+            UnitInfoUI.Instance.ShowEnemyInfo(this);
         }
     }
 }
