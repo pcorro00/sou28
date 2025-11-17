@@ -159,18 +159,21 @@ public class UnitPlacer : MonoBehaviour
     /// </summary>
     private void InitializeUnitStats(GameObject placedUnit)
     {
-        if (placedUnit == null) return;
-        if (currentUnitData == null) return;
+        if (placedUnit == null || currentUnitData == null) return;
 
         UnitStats stats = placedUnit.GetComponent<UnitStats>();
         if (stats != null)
         {
             stats.InitializeFromUnit(currentUnitData);
-            Debug.Log($"Initialized {currentUnitData.unitName} stats");
-        }
 
-        // 초기화 완료 후 리셋
-        currentUnitData = null;
+            // TraitManager에 등록 (위치값 필요 없음!)
+            if (TraitManager.Instance != null)
+            {
+                TraitManager.Instance.RegisterUnit(stats);
+            }
+
+            Debug.Log($"Unit registered for traits: {currentUnitData.unitName}");
+        }
     }
 
     // ========== 테스트용 입력 ==========
