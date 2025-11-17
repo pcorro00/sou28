@@ -166,15 +166,18 @@ public class UnitPlacer : MonoBehaviour
         {
             stats.InitializeFromUnit(currentUnitData);
 
-            // TraitManager에 등록 (위치값 필요 없음!)
+            // 변경: UnitData를 등록 (UnitStats 대신)
             if (TraitManager.Instance != null)
             {
-                TraitManager.Instance.RegisterUnit(stats);
+                TraitManager.Instance.RegisterDeployedUnit(currentUnitData);
             }
 
             Debug.Log($"Unit registered for traits: {currentUnitData.unitName}");
         }
     }
+
+
+
 
     // ========== 테스트용 입력 ==========
     private void Update()

@@ -15,16 +15,13 @@ public class TraitManager : MonoBehaviour
     [Header("디버그")]
     [SerializeField] private bool showDebugLogs = true;
 
-    // 특성별 카운트
     private Dictionary<UnitClass, TraitInfo> classTraits = new Dictionary<UnitClass, TraitInfo>();
     private Dictionary<UnitRace, TraitInfo> raceTraits = new Dictionary<UnitRace, TraitInfo>();
 
-    // 배치된 유닛들 (죽어도 유지)
-    private List<UnitStats> allDeployedUnits = new List<UnitStats>();
+    // 변경: UnitStats가 아닌 UnitData 리스트로 관리
+    private List<UnitData> deployedUnitData = new List<UnitData>();
 
-    // Singleton
     public static TraitManager Instance { get; private set; }
-
     public System.Action OnTraitsChanged;
 
     private void Awake()
@@ -44,12 +41,14 @@ public class TraitManager : MonoBehaviour
     private void Start()
     {
         Debug.Log("Trait Manager initialized");
-        InvokeRepeating(nameof(UpdateAllTraits), 0.5f, 0.5f);
+
+        // 5초마다 시너지 업데이트 (활성화 메시지 출력)
+        InvokeRepeating("UpdateAllTraits", 5f, 5f);
     }
+
 
     private void InitializeTraits()
     {
-        // 직업 시너지 설정
         classTraits[UnitClass.Warrior] = new TraitInfo
         {
             thresholds = new List<int> { 3, 6, 9 }
@@ -63,7 +62,6 @@ public class TraitManager : MonoBehaviour
             thresholds = new List<int> { 2, 4, 6 }
         };
 
-        // 종족 시너지 설정
         raceTraits[UnitRace.Human] = new TraitInfo
         {
             thresholds = new List<int> { 2, 4 }
@@ -78,55 +76,36 @@ public class TraitManager : MonoBehaviour
         };
     }
 
-    /// <summary>
-    /// 유닛이 배치될 때 호출
-    /// </summary>
-    public void RegisterUnit(UnitStats unit)
+    // 새로 추가: 유닛 배치 시 호출
+    public void RegisterDeployedUnit(UnitData unitData)
     {
-        if (unit == null) return;
-
-        if (!allDeployedUnits.Contains(unit))
+        if (unitData != null)
         {
-            allDeployedUnits.Add(unit);
-            Debug.Log($"Unit registered: {unit.CharacterName} ({unit.UnitType})");
+            deployedUnitData.Add(unitData);
+            Debug.Log($"Unit registered for traits: {unitData.unitName}");
             UpdateAllTraits();
         }
     }
 
-    /// <summary>
-    /// 유닛이 제거될 때 호출 (판매 등)
-    /// </summary>
-    public void UnregisterUnit(UnitStats unit)
+    // 새로 추가: 라운드 초기화 시 호출
+    public void ClearDeployedUnits()
     {
-        if (allDeployedUnits.Contains(unit))
-        {
-            allDeployedUnits.Remove(unit);
-            Debug.Log($"Unit unregistered: {unit.CharacterName}");
-            UpdateAllTraits();
-        }
+        deployedUnitData.Clear();
+        Debug.Log("Deployed units cleared for new round");
+        UpdateAllTraits();
     }
 
-    /// <summary>
-    /// 모든 시너지 업데이트
-    /// </summary>
+    // 수정: FindDeployedUnits 호출 제거
     public void UpdateAllTraits()
     {
-        // 카운트 계산
         CountTraits();
-
-        // 버프 적용
         ApplyTraitBuffs();
-
-        // UI 업데이트
         OnTraitsChanged?.Invoke();
     }
 
-    /// <summary>
-    /// 특성 카운트 (중복 유닛은 1개로만)
-    /// </summary>
+    // 수정: deployedUnitData 사용
     private void CountTraits()
     {
-        // 초기화
         foreach (var trait in classTraits.Values)
         {
             trait.currentCount = 0;
@@ -138,47 +117,35 @@ public class TraitManager : MonoBehaviour
             trait.activeLevel = 0;
         }
 
-        // 중복 제거를 위한 유닛 타입별 그룹화
-        HashSet<UnitType> uniqueUnitTypes = new HashSet<UnitType>();
+        // 중복 제거: 같은 UnitType은 한 번만 카운트
+        HashSet<UnitType> countedTypes = new HashSet<UnitType>();
 
-        Debug.Log($"=== Counting Traits: Total {allDeployedUnits.Count} units ===");
-
-        foreach (UnitStats unit in allDeployedUnits)
+        foreach (UnitData unit in deployedUnitData)
         {
-            if (unit == null) continue;
-
-            // 이미 계산된 유닛 타입은 스킵 (중복 제거!)
-            if (uniqueUnitTypes.Contains(unit.UnitType))
-            {
-                if (showDebugLogs)
-                    Debug.Log($"Skipping duplicate: {unit.UnitType}");
+            // 이미 카운트된 타입이면 스킵
+            if (countedTypes.Contains(unit.unitType))
                 continue;
-            }
 
-            uniqueUnitTypes.Add(unit.UnitType);
+            countedTypes.Add(unit.unitType);
 
             // 직업 카운트
-            if (unit.UnitClass != UnitClass.None && classTraits.ContainsKey(unit.UnitClass))
+            if (unit.unitClass != UnitClass.None && classTraits.ContainsKey(unit.unitClass))
             {
-                classTraits[unit.UnitClass].currentCount++;
-                if (showDebugLogs)
-                    Debug.Log($"{unit.UnitClass} unique count: {classTraits[unit.UnitClass].currentCount}");
+                classTraits[unit.unitClass].currentCount++;
             }
 
             // 종족 카운트
-            if (unit.UnitRace != UnitRace.None && raceTraits.ContainsKey(unit.UnitRace))
+            if (unit.unitRace != UnitRace.None && raceTraits.ContainsKey(unit.unitRace))
             {
-                raceTraits[unit.UnitRace].currentCount++;
+                raceTraits[unit.unitRace].currentCount++;
             }
         }
 
-        // 활성 레벨 계산
         CalculateActiveLevels();
     }
 
     private void CalculateActiveLevels()
     {
-        // 직업
         foreach (var kvp in classTraits)
         {
             TraitInfo info = kvp.Value;
@@ -196,11 +163,10 @@ public class TraitManager : MonoBehaviour
 
             if (info.activeLevel > previousLevel && info.activeLevel > 0)
             {
-                Debug.Log($"<color=yellow>🔥 {kvp.Key} 시너지 활성! (Level {info.activeLevel}) - {info.currentCount}개의 고유 유닛</color>");
+                Debug.Log($"[TRAIT] {kvp.Key} 시너지 활성! (Level {info.activeLevel})");
             }
         }
 
-        // 종족
         foreach (var kvp in raceTraits)
         {
             TraitInfo info = kvp.Value;
@@ -218,29 +184,27 @@ public class TraitManager : MonoBehaviour
 
             if (info.activeLevel > previousLevel && info.activeLevel > 0)
             {
-                Debug.Log($"<color=cyan>🔥 {kvp.Key} 시너지 활성! (Level {info.activeLevel}) - {info.currentCount}개의 고유 유닛</color>");
+                Debug.Log($"[TRAIT] {kvp.Key} 시너지 활성! (Level {info.activeLevel})");
             }
         }
     }
 
+    // 수정: 살아있는 유닛만 찾아서 버프 적용
     private void ApplyTraitBuffs()
     {
-        // 살아있는 유닛에게만 버프 적용
-        foreach (UnitStats unit in allDeployedUnits)
+        UnitStats[] aliveUnits = FindObjectsByType<UnitStats>(FindObjectsSortMode.None);
+
+        foreach (UnitStats unit in aliveUnits)
         {
             if (unit == null || unit.IsDead) continue;
 
-            // 버프 초기화
             unit.traitHealthMultiplier = 1f;
             unit.traitAttackMultiplier = 1f;
             unit.traitDefenseBonus = 0f;
             unit.traitManaRegenMultiplier = 1f;
             unit.traitCritChanceBonus = 0f;
 
-            // 직업 버프
             ApplyClassBuff(unit);
-
-            // 종족 버프
             ApplyRaceBuff(unit);
         }
     }
@@ -324,5 +288,28 @@ public class TraitManager : MonoBehaviour
         if (raceTraits.ContainsKey(unitRace))
             return raceTraits[unitRace];
         return null;
+    }
+
+    public List<string> GetActiveTraits()
+    {
+        List<string> active = new List<string>();
+
+        foreach (var kvp in classTraits)
+        {
+            if (kvp.Value.activeLevel > 0)
+            {
+                active.Add($"{kvp.Key} ({kvp.Value.currentCount})");
+            }
+        }
+
+        foreach (var kvp in raceTraits)
+        {
+            if (kvp.Value.activeLevel > 0)
+            {
+                active.Add($"{kvp.Key} ({kvp.Value.currentCount})");
+            }
+        }
+
+        return active;
     }
 }
