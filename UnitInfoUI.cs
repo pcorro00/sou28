@@ -112,39 +112,67 @@ public class UnitInfoUI : MonoBehaviour
             nameText.text = currentUnit.CharacterName;
         }
 
-        // 설명 (UnitData에서 가져와야 함 - 일단 생략)
-        if (descriptionText != null)
+        // Row 1 - MaxHealth 계산 수정
+        if (healthIcon != null)
         {
-            descriptionText.text = "유닛 설명";
+            float maxHp = currentUnit.MaxHealth;  // 이미 시너지 적용된 값
+            healthIcon.Setup(heartIcon, $"{currentUnit.CurrentHealth:F0}/{maxHp:F0}");
         }
 
-        // Row 1
-        healthIcon?.Setup(heartIcon, $"{currentUnit.CurrentHealth:F0}/{currentUnit.MaxHealth:F0}");
+        if (attackIcon != null)
+        {
+            float finalAttack = currentUnit.attackDamage * currentUnit.traitAttackMultiplier;
+            attackIcon.Setup(swordIcon, $"{finalAttack:F1}");
+        }
 
-        float finalAttack = currentUnit.AttackDamage * currentUnit.traitAttackMultiplier;
-        attackIcon?.Setup(swordIcon, $"{finalAttack:F1}");
+        if (rangeIcon != null)
+        {
+            rangeIcon.Setup(bowIcon, $"{currentUnit.attackRange:F1}");
+        }
 
-        rangeIcon?.Setup(bowIcon, $"{currentUnit.AttackRange:F1}");
+        if (defenseIcon != null)
+        {
+            float finalDefense = currentUnit.defense + currentUnit.traitDefenseBonus;
+            defenseIcon.Setup(shieldIcon, $"{finalDefense:F1}");
+        }
 
-        float finalDefense = currentUnit.Defense + currentUnit.traitDefenseBonus;
-        defenseIcon?.Setup(shieldIcon, $"{finalDefense:F1}");
+        if (maxManaIcon != null)
+        {
+            maxManaIcon.Setup(manaIcon, $"{currentUnit.MaxMana:F0}");
+        }
 
-        maxManaIcon?.Setup(manaIcon, $"{currentUnit.MaxMana:F0}");
-
-        float finalManaRegen = currentUnit.ManaRegen * currentUnit.traitManaRegenMultiplier;
-        manaRegenIcon?.Setup(manaRegenIconSprite, $"{finalManaRegen:F1}/s");
+        if (manaRegenIcon != null)
+        {
+            float finalManaRegen = currentUnit.manaRegen * currentUnit.traitManaRegenMultiplier;
+            manaRegenIcon.Setup(manaRegenIconSprite, $"{finalManaRegen:F1}/s");
+        }
 
         // Row 2
-        float finalCritChance = currentUnit.CriticalChance + currentUnit.traitCritChanceBonus;
-        critChanceIcon?.Setup(critIcon, $"{finalCritChance:F0}%");
+        if (critChanceIcon != null)
+        {
+            float finalCritChance = currentUnit.criticalChance + currentUnit.traitCritChanceBonus;
+            critChanceIcon.Setup(critIcon, $"{finalCritChance:F0}%");
+        }
 
-        critDamageIcon?.Setup(critDmgIcon, $"{currentUnit.CriticalDamage:F1}x");
+        if (critDamageIcon != null)
+        {
+            critDamageIcon.Setup(critDmgIcon, $"{currentUnit.CriticalDamage:F1}x");
+        }
 
-        evasionIcon?.Setup(dodgeIcon, $"{currentUnit.EvasionChance:F0}%");
+        if (evasionIcon != null)
+        {
+            evasionIcon.Setup(dodgeIcon, $"{currentUnit.evasionChance:F0}%");
+        }
 
-        lifeStealIcon?.Setup(vampireIcon, $"{currentUnit.LifeSteal:F0}%");
+        if (lifeStealIcon != null)
+        {
+            lifeStealIcon.Setup(vampireIcon, $"{currentUnit.lifeSteal:F0}%");
+        }
 
-        healthRegenIcon?.Setup(regenIcon, $"{currentUnit.HealthRegen:F1}/s");
+        if (healthRegenIcon != null)
+        {
+            healthRegenIcon.Setup(regenIcon, $"{currentUnit.healthRegen:F1}/s");
+        }
     }
 
     private void UpdateEnemyInfo()

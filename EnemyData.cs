@@ -31,6 +31,7 @@ public class EnemyData : ScriptableObject
     [Header("전투 스탯")]
     public float attackRange = 1.5f;    // 공격 범위
     public float attackCooldown = 1f;   // 공격 쿨다운 (초)
+    public float defense = 0f;
 
     [Header("보상")]
     public int goldReward = 10;         // 처치 시 골드

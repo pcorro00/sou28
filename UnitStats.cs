@@ -7,29 +7,29 @@ using System.Collections.Generic;
 public class UnitStats : MonoBehaviour
 {
     [Header("캐릭터 정보")]
-    [SerializeField] private UnitType unitType;
-    [SerializeField] private string characterName;
+    [SerializeField] public UnitType unitType;
+    [SerializeField] public string characterName;
 
     [Header("기본 스탯")]
-    [SerializeField] private float maxHealth = 100f;
-    [SerializeField] private float attackDamage = 10f;
-    [SerializeField] private float attackRange = 3f;
-    [SerializeField] private float defense = 0f;
+    [SerializeField] public float maxHealth = 100f;
+    [SerializeField] public float attackDamage = 10f;
+    [SerializeField] public float attackRange = 3f;
+    [SerializeField] public float defense = 0f;
 
     [Header("마나 시스템")]
-    [SerializeField] private float maxMana = 100f;
-    [SerializeField] private float manaRegen = 20f;     // 초당 마나 회복
+    [SerializeField] public float maxMana = 100f;
+    [SerializeField] public float manaRegen = 20f;     // 초당 마나 회복
 
     [Header("특수 스탯")]
-    [SerializeField] private float criticalChance = 0f;
-    [SerializeField] private float criticalDamage = 1.2f;
-    [SerializeField] private float evasionChance = 0f;
-    [SerializeField] private float lifeSteal = 0f;
-    [SerializeField] private float healthRegen = 0f;
+    [SerializeField] public float criticalChance = 0f;
+    [SerializeField] public float criticalDamage = 1.2f;
+    [SerializeField] public float evasionChance = 0f;
+    [SerializeField] public float lifeSteal = 0f;
+    [SerializeField] public float healthRegen = 0f;
 
     [Header("시너지 (Traits)")]
-    [SerializeField] private UnitClass unitClass;
-    [SerializeField] private UnitRace unitRace;
+    [SerializeField] public UnitClass unitClass;
+    [SerializeField] public UnitRace unitRace;
 
     [Header("전투 설정")]
     [SerializeField] private bool autoAttack = true;

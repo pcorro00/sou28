@@ -19,9 +19,9 @@ public class EnemyController : MonoBehaviour
     private bool isDead = false;
 
     [Header("특수 스탯")]
-    [SerializeField] private float criticalChance = 0f;
-    [SerializeField] private float criticalDamage = 1.2f;  
-    [SerializeField] private float evasionChance = 0f;
+    [SerializeField] public float criticalChance = 0f;
+    [SerializeField] public float criticalDamage = 1.2f;  
+    [SerializeField] public float evasionChance = 0f;
 
     // 전투 관련
     private UnitStats currentTarget;                        // 현재 공격 대상
@@ -32,6 +32,10 @@ public class EnemyController : MonoBehaviour
     public float CurrentHealth => currentHealth;
     public float MaxHealth => enemyData != null ? enemyData.maxHealth : 100f;
     public bool IsDead => isDead;
+    public float AttackDamage => enemyData != null ? enemyData.attackDamage : 10f;
+    public float AttackRange => attackRange;
+    public float Defense => enemyData != null ? enemyData.defense : 0f;
+
 
     public float CriticalChance => criticalChance;
     public float CriticalDamage => criticalDamage;
