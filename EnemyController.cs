@@ -382,11 +382,5 @@ public class EnemyController : MonoBehaviour
             }
         }
     }
-    private void OnMouseDown()
-    {
-        if (UnitInfoUI.Instance != null)
-        {
-            UnitInfoUI.Instance.ShowEnemyInfo(this);
-        }
-    }
+   
 }

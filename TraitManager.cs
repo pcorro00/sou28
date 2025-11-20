@@ -37,7 +37,15 @@ public class TraitManager : MonoBehaviour
 
         InitializeTraits();
     }
-
+    public void UnregisterDeployedUnit(UnitData unitData)
+    {
+        if (unitData != null && deployedUnitData.Contains(unitData))
+        {
+            deployedUnitData.Remove(unitData);
+            Debug.Log($"Unit unregistered from traits: {unitData.unitName}");
+            UpdateAllTraits();
+        }
+    }
     private void Start()
     {
         Debug.Log("Trait Manager initialized");

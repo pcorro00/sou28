@@ -56,16 +56,9 @@ public class UnitInventoryUI : MonoBehaviour
             return;
         }
     }
-
+   
     private void Start()
     {
-        Debug.Log(">>> Start() called, checking containers...");
-        Debug.Log($">>> tier1Container: {(tier1Container != null ? tier1Container.name : "NULL")}");
-        Debug.Log($">>> tier2Container: {(tier2Container != null ? tier2Container.name : "NULL")}");
-        Debug.Log($">>> tier3Container: {(tier3Container != null ? tier3Container.name : "NULL")}");
-        Debug.Log($">>> tier4Container: {(tier4Container != null ? tier4Container.name : "NULL")}");
-        Debug.Log($">>> tier5Container: {(tier5Container != null ? tier5Container.name : "NULL")}");
-
         // 시스템 찾기
         inventory = UnitInventory.Instance;
 
@@ -77,6 +70,17 @@ public class UnitInventoryUI : MonoBehaviour
 
         // 이벤트 연결
         inventory.OnInventoryChanged += RefreshInventory;
+
+
+        if (openButton != null)
+        {
+            openButton.onClick.AddListener(OpenInventory);
+            Debug.Log("OpenButton listener added!");
+        }
+        else
+        {
+            Debug.LogError("openButton is NULL! Not connected in Inspector!");
+        }
 
         if (openButton != null)
             openButton.onClick.AddListener(OpenInventory);
@@ -115,6 +119,7 @@ public class UnitInventoryUI : MonoBehaviour
     /// </summary>
     public void OpenInventory()
     {
+        Debug.Log("=== OpenInventory CALLED! ===");
         if (inventoryPanel != null)
         {
             inventoryPanel.SetActive(true);

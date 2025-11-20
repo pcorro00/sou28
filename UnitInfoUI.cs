@@ -59,14 +59,12 @@ public class UnitInfoUI : MonoBehaviour
 
     private void Start()
     {
+        Debug.Log("UnitInfoUI Start called!");
+
+        // 패널 숨김 (간단하게!)
         if (infoPanel != null)
         {
             infoPanel.SetActive(false);
-        }
-
-        if (closeButton != null)
-        {
-            closeButton.onClick.AddListener(HideInfo);
         }
 
         Debug.Log("Unit Info UI initialized");
@@ -74,14 +72,23 @@ public class UnitInfoUI : MonoBehaviour
 
     public void ShowUnitInfo(UnitStats unit)
     {
+        Debug.Log($"ShowUnitInfo called for: {(unit != null ? unit.CharacterName : "NULL")}");
+
         if (unit == null) return;
 
         currentUnit = unit;
         currentEnemy = null;
 
+        // 패널 활성화 - 이 부분이 꼭 있어야 합니다!
         if (infoPanel != null)
         {
+            Debug.Log($"Before SetActive: {infoPanel.activeSelf}");
             infoPanel.SetActive(true);
+            Debug.Log($"After SetActive: {infoPanel.activeSelf}");
+        }
+        else
+        {
+            Debug.LogError("infoPanel is NULL in ShowUnitInfo!");
         }
 
         UpdateUnitInfo();
@@ -89,18 +96,28 @@ public class UnitInfoUI : MonoBehaviour
 
     public void ShowEnemyInfo(EnemyController enemy)
     {
+        Debug.Log($"ShowEnemyInfo called for: {(enemy != null ? enemy.EnemyData.enemyName : "NULL")}");
+
         if (enemy == null) return;
 
         currentEnemy = enemy;
         currentUnit = null;
 
+        // 패널 활성화 - 이 부분 추가!
         if (infoPanel != null)
         {
+            Debug.Log($"Before SetActive: {infoPanel.activeSelf}");
             infoPanel.SetActive(true);
+            Debug.Log($"After SetActive: {infoPanel.activeSelf}");
+        }
+        else
+        {
+            Debug.LogError("infoPanel is NULL in ShowEnemyInfo!");
         }
 
         UpdateEnemyInfo();
     }
+
 
     private void UpdateUnitInfo()
     {
@@ -206,9 +223,53 @@ public class UnitInfoUI : MonoBehaviour
         lifeStealIcon?.Setup(vampireIcon, "-");
         healthRegenIcon?.Setup(regenIcon, "-");
     }
+    private void Update()
+    {
+        // 실시간 업데이트
+        if (currentUnit != null)
+        {
+            UpdateUnitInfo();
 
+            // ESC나 패널 밖 클릭으로 닫기
+            if (Input.GetKeyDown(KeyCode.Escape) ||
+                (Input.GetMouseButtonDown(0) && !IsPointerOverPanel()))
+            {
+                HideInfo();
+            }
+        }
+        else if (currentEnemy != null)
+        {
+            UpdateEnemyInfo();
+
+            // ESC나 패널 밖 클릭으로 닫기
+            if (Input.GetKeyDown(KeyCode.Escape) ||
+                (Input.GetMouseButtonDown(0) && !IsPointerOverPanel()))
+            {
+                HideInfo();
+            }
+        }
+    }
+
+    private bool IsPointerOverPanel()
+    {
+        if (infoPanel == null || !infoPanel.activeSelf) return false;
+
+        RectTransform panelRect = infoPanel.GetComponent<RectTransform>();
+        if (panelRect == null) return false;
+
+        Vector2 localMousePosition;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            panelRect,
+            Input.mousePosition,
+            null,
+            out localMousePosition
+        );
+
+        return panelRect.rect.Contains(localMousePosition);
+    }
     public void HideInfo()
     {
+        // 패널 숨김 (간단하게!)
         if (infoPanel != null)
         {
             infoPanel.SetActive(false);

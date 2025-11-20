@@ -49,9 +49,12 @@ public class UnitStats : MonoBehaviour
     [HideInInspector] public float traitManaRegenMultiplier = 1f;
     [HideInInspector] public float traitCritChanceBonus = 0f;
 
+    private UnitData originalUnitData;
+    public UnitData OriginalUnitData => originalUnitData;
+
     // 프로퍼티
     public Vector2Int GridPosition => gridPosition;
-    public float CurrentHealth => currentHealth;
+    public float CurrentHealth => currentHealth * traitHealthMultiplier;
     public float MaxHealth => maxHealth * traitHealthMultiplier;
     public float CurrentMana => currentMana;
     public float MaxMana => maxMana;
@@ -101,6 +104,8 @@ public class UnitStats : MonoBehaviour
     public void InitializeFromUnit(UnitData unitData)
     {
         if (unitData == null) return;
+
+        originalUnitData = unitData;
 
         unitType = unitData.unitType;
         characterName = unitData.unitName;
@@ -327,11 +332,16 @@ public class UnitStats : MonoBehaviour
             Gizmos.DrawLine(transform.position, currentTarget.transform.position);
         }
     }
-    private void OnMouseDown()
+    public void ShowStatsUI()
     {
-        if (UnitInfoUI.Instance != null)
+        UnitInfoUI infoUI = UnitInfoUI.Instance;
+        if (infoUI != null)
         {
-            UnitInfoUI.Instance.ShowUnitInfo(this);
+            infoUI.ShowUnitInfo(this);
+        }
+        else
+        {
+            Debug.LogWarning("UnitInfoUI not found!");
         }
     }
 }

@@ -50,9 +50,15 @@ public class UnitPlacer : MonoBehaviour
     // 셀 클릭 이벤트 (배치)
     private void OnCellClicked(Vector2Int gridPos)
     {
+        Debug.Log($"[UnitPlacer] OnCellClicked called! gridPos: {gridPos}, isPlacingMode: {isPlacingMode}, selectedUnit: {(selectedUnit != null ? "OK" : "NULL")}");
+
         if (isPlacingMode && selectedUnit != null)
         {
             PlaceUnit(gridPos);
+        }
+        else
+        {
+            Debug.LogWarning($"[UnitPlacer] Cannot place! isPlacingMode: {isPlacingMode}, selectedUnit: {(selectedUnit != null ? "OK" : "NULL")}");
         }
     }
 
@@ -73,6 +79,8 @@ public class UnitPlacer : MonoBehaviour
     // 유닛 배치 실행 (수정됨!)
     private void PlaceUnit(Vector2Int gridPos)
     {
+        Debug.Log($"[PlaceUnit] Called! gridPos: {gridPos}, selectedUnit: {(selectedUnit != null ? selectedUnit.name : "NULL")}");
+
         if (selectedUnit == null)
         {
             Debug.LogWarning("No unit selected to place!");
@@ -81,21 +89,20 @@ public class UnitPlacer : MonoBehaviour
 
         // GridSystem을 통해 배치 시도
         bool success = gridSystem.PlaceUnit(gridPos, selectedUnit);
+        Debug.Log($"[PlaceUnit] GridSystem.PlaceUnit returned: {success}");
 
         if (success)
         {
-            // 배치 성공 시 해당 위치의 유닛 가져오기
             GameObject placedUnit = gridSystem.GetUnitAtPosition(gridPos);
+            Debug.Log($"[PlaceUnit] placedUnit: {(placedUnit != null ? placedUnit.name : "NULL")}");
 
             if (placedUnit != null)
             {
-                // UnitData가 있으면 스탯 초기화
                 InitializeUnitStats(placedUnit);
             }
 
             Debug.Log($"Unit placed at {gridPos}");
 
-            // 배치 모드 종료
             isPlacingMode = false;
             selectedUnit = null;
         }
@@ -112,6 +119,15 @@ public class UnitPlacer : MonoBehaviour
 
         if (unit != null)
         {
+            UnitStats stats = unit.GetComponent<UnitStats>();
+            if (stats != null && stats.OriginalUnitData != null)
+            {
+                if (TraitManager.Instance != null)
+                {
+                    TraitManager.Instance.UnregisterDeployedUnit(stats.OriginalUnitData);
+                }
+            }
+
             if (gridSystem.RemoveUnit(gridPos))
             {
                 Destroy(unit);
