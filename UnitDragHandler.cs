@@ -1,188 +1,152 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
-using System.Collections;
 
 public class UnitDragHandler : MonoBehaviour
 {
-    [Header("드래그 설정")]
-    [SerializeField] private float holdDuration = 1.5f;
-    [SerializeField] private LayerMask gridLayerMask = 1 << 0;
+    [Header("설정")]
+    public float holdThreshold = 0.25f; // 0.25초 이상 누르면 드래그
+    public float dragScale = 1.2f;      // 드래그 중 크기 확대
 
-    private UnitStats unitStats;
-    private GridSystem gridSystem;
+    private bool isPressed = false;
     private bool isDragging = false;
-    private bool isHolding = false;
-    private float holdTimer = 0f;
-    private Vector3 originalPosition;
-    private Vector2Int originalGridPos;
-    private Camera mainCamera;
+    private float pressTime = 0f;
 
-    private void Start()
+    private Vector3 offset;
+    private Vector3 originalScale;
+    private int originalSortOrder;
+
+    private SpriteRenderer spriteRenderer;
+    private Camera mainCam;
+
+    // 현재 유닛이 있는 그리드 좌표를 기억해야 함
+    private Vector2Int currentGridPos;
+
+    void Start()
     {
-        unitStats = GetComponent<UnitStats>();
-        gridSystem = FindFirstObjectByType<GridSystem>();
-        mainCamera = Camera.main;
-        originalPosition = transform.position;
+        mainCam = Camera.main;
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        originalScale = transform.localScale;
+
+        // 시작할 때 내 그리드 좌표를 알아냄
+        // (주의: 유닛 생성 시점에 GridSystem에 등록된 상태여야 정확함)
+        Invoke(nameof(SyncGridPosition), 0.1f);
     }
 
-    private void OnMouseDown()
+    void SyncGridPosition()
     {
-        if (Time.timeScale == 0) return;
-        if (IsPointerOverUI()) return;
-
-        isHolding = true;
-        holdTimer = 0f;
-        StartCoroutine(CheckHold());
-    }
-
-    private void OnMouseUp()
-    {
-        if (isDragging)
+        if (GridSystem.Instance != null)
         {
-            HandleDrop();
+            currentGridPos = GridSystem.Instance.WorldToGridPosition(transform.position);
         }
-        else if (isHolding && holdTimer < holdDuration)
+    }
+
+    void Update()
+    {
+        // 1. 마우스/터치 시작
+        if (Input.GetMouseButtonDown(0))
         {
-            UnitInfoUI infoUI = UnitInfoUI.Instance;
-            if (infoUI != null)
+            Vector2 mousePos = mainCam.ScreenToWorldPoint(Input.mousePosition);
+            RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
+
+            // 내가 클릭되었는지 확인
+            if (hit.collider != null && hit.collider.gameObject == gameObject)
             {
-                infoUI.ShowUnitInfo(unitStats);
+                isPressed = true;
+                isDragging = false;
+                pressTime = Time.time;
+
+                // 마우스와 유닛 중심 간의 거리 차이 계산 (자연스러운 드래그)
+                offset = transform.position - (Vector3)mousePos;
+
+                // 현재 그리드 위치 갱신 (혹시 모르니)
+                SyncGridPosition();
             }
         }
 
-        isHolding = false;
-        isDragging = false;
-        holdTimer = 0f;
-    }
-
-    private void OnMouseDrag()
-    {
-        if (!isDragging) return;
-
-        Vector3 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-        mousePos.z = 0;
-        transform.position = mousePos;
-    }
-
-    private IEnumerator CheckHold()
-    {
-        while (isHolding && holdTimer < holdDuration)
+        // 2. 누르고 있는 중 (홀드 체크)
+        if (isPressed && !isDragging)
         {
-            holdTimer += Time.deltaTime;
-            yield return null;
+            if (Time.time - pressTime > holdThreshold)
+            {
+                StartDragging();
+            }
         }
 
-        if (isHolding && holdTimer >= holdDuration)
+        // 3. 드래그 중 이동 로직
+        if (isDragging)
         {
-            StartDragging();
+            Vector3 mousePos = mainCam.ScreenToWorldPoint(Input.mousePosition);
+            transform.position = new Vector3(mousePos.x + offset.x, mousePos.y + offset.y, 0);
+        }
+
+        // 4. 마우스/터치 뗌
+        if (Input.GetMouseButtonUp(0) && isPressed)
+        {
+            isPressed = false;
+
+            if (isDragging)
+            {
+                EndDragging();
+            }
+            else
+            {
+                // 드래그 안 하고 뗐음 -> 클릭(스탯창)
+                HandleClick();
+            }
         }
     }
 
-    private void StartDragging()
+    void StartDragging()
     {
         isDragging = true;
-        originalPosition = transform.position;
-        originalGridPos = unitStats.GridPosition;
 
-        transform.localScale = Vector3.one * 1.2f;
-
-        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        if (sr != null)
+        // 시각적 효과: 크기 키우기 & 맨 위로 그리기
+        transform.localScale = originalScale * dragScale;
+        if (spriteRenderer)
         {
-            Color c = sr.color;
-            c.a = 0.7f;
-            sr.color = c;
+            originalSortOrder = spriteRenderer.sortingOrder;
+            spriteRenderer.sortingOrder = 100; // UI보다 앞에 보이게
         }
-
-        Debug.Log($"Started dragging {unitStats.CharacterName}");
     }
 
-    private void HandleDrop()
+    void EndDragging()
     {
-        transform.localScale = Vector3.one;
+        isDragging = false;
 
-        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        if (sr != null)
+        // 시각적 효과 복구
+        transform.localScale = originalScale;
+        if (spriteRenderer)
         {
-            Color c = sr.color;
-            c.a = 1f;
-            sr.color = c;
+            spriteRenderer.sortingOrder = originalSortOrder;
         }
 
-        if (IsOverInventoryButton())
+        // GridSystem에게 배치 요청
+        if (GridSystem.Instance != null)
         {
-            ReturnToInventory();
-        }
-        else if (TryPlaceOnGrid())
-        {
-            Debug.Log("Unit moved to new position");
+            bool success = GridSystem.Instance.TryMoveUnit(gameObject, currentGridPos, transform.position);
+
+            if (success)
+            {
+                // 이동 성공했으면 내 내부 좌표 업데이트
+                currentGridPos = GridSystem.Instance.WorldToGridPosition(transform.position);
+            }
+            // 실패했으면 TryMoveUnit 안에서 알아서 원래 위치로 돌려보냄
         }
         else
         {
-            transform.position = originalPosition;
-            Debug.Log("Invalid drop position - returning to original");
+            // 그리드 시스템이 없으면 그냥 원래 자리로
+            transform.position = GridSystem.Instance.GridToWorldPosition(currentGridPos.x, currentGridPos.y);
         }
     }
 
-    private bool IsOverInventoryButton()
+    void HandleClick()
     {
-        PointerEventData eventData = new PointerEventData(EventSystem.current);
-        eventData.position = Input.mousePosition;
-        var results = new System.Collections.Generic.List<RaycastResult>();
-        EventSystem.current.RaycastAll(eventData, results);
+        Debug.Log("유닛 클릭됨: 스탯창 열기");
 
-        foreach (var result in results)
+        // 님 코드에 있는 UnitInfoUI 사용
+        UnitStats myStats = GetComponent<UnitStats>();
+        if (myStats != null && UnitInfoUI.Instance != null)
         {
-            if (result.gameObject.name == "InventoryButton" ||
-                result.gameObject.CompareTag("InventoryButton"))
-            {
-                return true;
-            }
+            UnitInfoUI.Instance.ShowUnitInfo(myStats);
         }
-        return false;
-    }
-
-    private bool TryPlaceOnGrid()
-    {
-        Vector3 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-        mousePos.z = 0;
-
-        Vector2Int gridPos = gridSystem.GetGridPosition(mousePos);
-
-        if (gridSystem.IsValidPosition(gridPos) && !gridSystem.IsOccupied(gridPos))
-        {
-            gridSystem.RemoveUnit(originalGridPos);
-
-            // PlaceUnit 매개변수 순서 수정
-            gridSystem.PlaceUnit(gridPos, gameObject);  // 순서 바꿈
-            transform.position = gridSystem.GetWorldPosition(gridPos);
-            unitStats.Initialize(gridPos);
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private void ReturnToInventory()
-    {
-        Debug.Log($"Returning {unitStats.CharacterName} to inventory");
-
-        UnitInventory inventory = UnitInventory.Instance;
-        if (inventory != null)
-        {
-            UnitData unitData = Resources.Load<UnitData>($"Units/{unitStats.UnitType}");
-            if (unitData != null)
-            {
-                inventory.AddUnit(unitData);
-                gridSystem.RemoveUnit(originalGridPos);
-                Destroy(gameObject);
-            }
-        }
-    }
-
-    private bool IsPointerOverUI()
-    {
-        return EventSystem.current.IsPointerOverGameObject();
     }
 }

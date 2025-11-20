@@ -6,6 +6,18 @@ using System.Collections.Generic;
 /// </summary>
 public class GridSystem : MonoBehaviour
 {
+    public static GridSystem Instance { get; private set; }
+    private void Awake()
+    {
+        // 이미 있으면 파괴하고, 없으면 나를 등록
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+
     [Header("Grid Settings")]
     [SerializeField] private int gridWidth = 8;
     [SerializeField] private int gridHeight = 5;
@@ -29,13 +41,15 @@ public class GridSystem : MonoBehaviour
     private float touchStartTime;
     private Vector2Int touchStartGridPos;
     private bool isTouching;
+    private Vector3 mouseDownPosition;
+    private bool isMouseDown = false;
 
     private void Start()
     {
         InitializeGrid();
         CreateVisualGrid();
     }
-
+  
     private void InitializeGrid()
     {
         grid = new GridCell[gridWidth, gridHeight];
@@ -70,7 +84,56 @@ public class GridSystem : MonoBehaviour
             }
         }
     }
+    public bool TryMoveUnit(GameObject unit, Vector2Int oldGridPos, Vector3 dropWorldPos)
+    {
+        Vector2Int newGridPos = WorldToGridPosition(dropWorldPos);
 
+        // 1. 같은 자리면 이동 안 함 (그냥 성공 처리)
+        if (oldGridPos == newGridPos)
+        {
+            unit.transform.position = GridToWorldPosition(newGridPos.x, newGridPos.y);
+            return true;
+        }
+
+        // 2. 유효하지 않은 위치거나(맵 밖), 이미 누가 있으면 이동 실패
+        if (!IsValidGridPosition(newGridPos) || IsCellOccupied(newGridPos))
+        {
+            Debug.Log("이동 실패: 유효하지 않거나 이미 점유된 타일");
+            // 원래 위치로 되돌림
+            unit.transform.position = GridToWorldPosition(oldGridPos.x, oldGridPos.y);
+            return false;
+        }
+
+        // 3. 데이터 갱신 (이사 가기)
+
+        // 이전 자리 비우기
+        grid[oldGridPos.x, oldGridPos.y].isOccupied = false;
+        if (unitPositions.ContainsKey(oldGridPos))
+        {
+            unitPositions.Remove(oldGridPos);
+        }
+        // 시각적 효과 복구
+        GridCellVisual oldCellVisual = grid[oldGridPos.x, oldGridPos.y].visualObject.GetComponent<GridCellVisual>();
+        if (oldCellVisual) oldCellVisual.SetColor(placableColor);
+
+
+        // 새 자리 차지하기
+        grid[newGridPos.x, newGridPos.y].isOccupied = true;
+        unitPositions[newGridPos] = unit;
+
+        // 시각적 효과 적용
+        GridCellVisual newCellVisual = grid[newGridPos.x, newGridPos.y].visualObject.GetComponent<GridCellVisual>();
+        if (newCellVisual) newCellVisual.SetColor(occupiedColor);
+
+
+        // 4. 유닛 실제 위치 이동 (Z축 0 보장)
+        Vector3 finalPos = GridToWorldPosition(newGridPos.x, newGridPos.y);
+        finalPos.z = 0;
+        unit.transform.position = finalPos;
+
+        Debug.Log($"유닛 이동 성공: {oldGridPos} -> {newGridPos}");
+        return true;
+    }
     private void Update()
     {
 #if UNITY_ANDROID || UNITY_IOS
@@ -81,25 +144,26 @@ public class GridSystem : MonoBehaviour
     }
 
     // ========== PC 입력 (마우스) ==========
-     private void HandleMouseInput()
+    private void HandleMouseInput()
     {
         Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        // 마우스 호버 효과
         UpdateHoverEffect(mousePos);
 
-        // 왼쪽 클릭 - 유닛 배치
-        if (Input.GetMouseButtonDown(0))
+        // GetMouseButtonUp으로 변경!
+        if (Input.GetMouseButtonUp(0))  // Down → Up
         {
-           HandleClick(mousePos);
+            if (!UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                HandleClick(mousePos);
+            }
         }
 
-        // 우클릭 - 유닛 제거
         if (Input.GetMouseButtonDown(1))
-       {
-         HandleRemove(mousePos);
-       }
-     }
+        {
+            HandleRemove(mousePos);
+        }
+    }
 
     private void UpdateHoverEffect(Vector3 worldPosition)
     {
@@ -446,4 +510,6 @@ public class GridCell
         this.isPlaceable = placeable;
         this.isOccupied = false;
     }
+
+  
 }
